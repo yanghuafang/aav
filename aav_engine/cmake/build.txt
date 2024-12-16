@@ -1,0 +1,99 @@
+#build on CentOS 7.x x86_64
+
+
+#host build environment
+
+#build and install llvm/clang from http://www.llvm.org
+rm -rf llvm llvm_build
+
+svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm
+
+cd llvm/tools
+
+svn co http://llvm.org/svn/llvm-project/cfe/trunk clang
+
+cd ../..
+
+cd llvm/tools/clang/tools
+
+svn co http://llvm.org/svn/llvm-project/clang-tools-extra/trunk extra
+
+cd ../../../..
+
+mkdir -p llvm_build
+
+cd llvm_build
+
+../llvm/configure --prefix=/usr/local/llvm --enable-optimized
+
+#cmake -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH=/usr/local/llvm ../llvm
+
+make -j4
+sudo make install
+
+#build helloworld
+cd helloworld
+mkdir -p build
+cd build
+cmake .. -DLLVM_DIR="/usr/local/llvm/share/llvm/cmake" -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+-DCMAKE_C_COMPILER="/usr/local/llvm/bin/clang" -DCMAKE_CXX_COMPILER="/usr/local/llvm/bin/clang++"
+make -j4
+
+
+#target build environment
+
+#download NDK from http://developer.android.com
+#build target
+export ANDROID_NDK=~/android-ndk-r10
+#export ANDROID_NDK=~/android-ndk-r9d
+cmake .. -DCMAKE_TOOLCHAIN_FILE=~/android.toolchain.cmake -DCMAKE_BUILD_TYPE="Release"
+
+#for android.toolchain.cmake, usually we use the default value.
+#the following options can be configured:
+ANDROID_NDK
+ANDROID_STANDALONE_TOOLCHAIN
+ANDROID_ABI
+ANDROID_NATIVE_API_LEVEL
+ANDROID_TOOLCHAIN_NAME
+ANDROID_FORCE_ARM_BUILD
+ANDROID_NO_UNDEFINED
+ANDROID_SO_UNDEFINED=OFF
+LIBRARY_OUTPUT_PATH_ROOT
+ANDROID_SET_OBSOLETE_VARIABLES
+ANDROID_STL
+ANDROID_STL_FORCE_FEATURES
+#for example:
+cmake .. -DCMAKE_TOOLCHAIN_FILE=~/android.toolchain.cmake -DCMAKE_BUILD_TYPE="Release" \
+-DANDROID_ABI=armeabi-v7a -DANDROID_NATIVE_API_LEVEL=android-8 \
+-DANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-clang3.4 \
+-DANDROID_STL=gnustl_static -DANDROID_STL_FORCE_FEATURES=ON
+
+
+#build by cmake
+
+#build fileid for Android
+cd build/module_build
+cmake ../../fileid/ -DANDROID_BUILD=ON -DARM_BUILD=ON -DCLANG_BUILD=ON -DRELEASE_BUILD=ON
+
+#build fileid for Linux
+cd build/module_build
+cmake ../../fileid/ -DLINUX_BUILD=ON -DX86_BUILD=ON -DCLANG_BUILD=ON -DDEBUG_BUILD=ON
+
+#build aaveng for Android
+cd build/module_build
+cmake ../../ -DANDROID_BUILD=ON -DARM_BUILD=ON -DCLANG_BUILD=ON -DRELEASE_BUILD=ON -DMODULE_BUILD=ON
+make
+
+cd build/lib_build
+cmake ../../ -DANDROID_BUILD=ON -DARM_BUILD=ON -DCLANG_BUILD=ON -DRELEASE_BUILD=ON
+make
+
+#build aaveng for Linux
+cd build/module_build
+cmake ../../ -DLINUX_BUILD=ON -DX86_BUILD=ON -DCLANG_BUILD=ON -DDEBUG_BUILD=ON -DMODULE_BUILD=ON
+make
+
+cd build/lib_build
+cmake ../../ -DLINUX_BUILD=ON -DX86_BUILD=ON -DCLANG_BUILD=ON -DDEBUG_BUILD=ON 
+make
+
